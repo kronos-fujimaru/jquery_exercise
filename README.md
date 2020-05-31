@@ -370,6 +370,7 @@ public class FruitDao {
             ResultSet rs = ps.executeQuery();
             while (rs.next()) {
                 FruitDto fruit = new FruitDto();
+                fruit.setId(rs.getInt("ID"));
                 fruit.setName(rs.getString("NAME"));
                 fruit.setOrigin(rs.getString("ORIGIN"));
                 fruit.setPrice(rs.getInt("PRICE"));

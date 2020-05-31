@@ -316,92 +316,55 @@ $(function() {
 
 ## 演習9
 
-**jquery8.jsp**
-```html
-<%@page import="com.exercise.dto.FruitDto"%>
-<%@page import="java.util.List"%>
-<%@page import="com.exercise.dao.FruitDao"%>
-<%@ page language="java" contentType="text/html; charset=UTF-8"
-	pageEncoding="UTF-8"%>
-<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
-<%
-	FruitDao dao = new FruitDao();
-	List<FruitDto> fruitList = dao.findAll();
-	request.setAttribute("fruitList", fruitList);
-%>
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="UTF-8">
-<title>jQuery演習</title>
-<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
-<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css">
-<script type="text/javascript">
-$(function() {
-	$("#add-fruit").on("click", function() {
-		$("#message").empty();
-		$.ajax({
-			type: "POST",
-			url: "/jquery_sample/add-fruit",
-			data: {
-				"name": $("#name").val(),
-				"origin": $("#origin").val(),
-				"price": $("#price").val()
-			},
-			success: function() {
-				$("#fruits-list").append("<tr></tr>");
-				$("#fruits-list tr:last").append("<td>" + $("#name").val() + "</td>");
-				$("#fruits-list tr:last").append("<td>" + $("#origin").val() + "</td>");
-				$("#fruits-list tr:last").append("<td>" + $("#price").val() + "円</td>");
+**FruitDao.java**
+```java
+package com.exercise.dao;
 
-				$("#name, #origin, #price").val("");
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.List;
+import javax.naming.NamingException;
 
-				$("#message").attr("class", "alert alert-primary");
-				$("#message").text("フルーツを追加しました。");
-			},
-			error: function() {
-				$("#message").attr("class", "alert alert-danger");
-				$("#message").text("フルーツの追加に失敗しました。");
+import com.exercise.DataSourceManager;
+import com.exercise.dto.FruitDto;
+
+public class FruitDao {
+
+	public List<FruitDto> findAll() throws SQLException, NamingException {
+		String sql = "SELECT * FROM FRUIT";
+		List<FruitDto> fruitList = new ArrayList<>();
+		try (Connection con = DataSourceManager.getConnection();
+				PreparedStatement ps = con.prepareStatement(sql)) {
+			ResultSet rs = ps.executeQuery();
+			while (rs.next()) {
+				FruitDto fruit = new FruitDto();
+				fruit.setId(rs.getInt("ID"));
+				fruit.setName(rs.getString("NAME"));
+				fruit.setOrigin(rs.getString("ORIGIN"));
+				fruit.setPrice(rs.getInt("PRICE"));
+				fruitList.add(fruit);
 			}
-		})
-	});
-});
-</script>
-</head>
-<body>
-	<div class="container">
-		<div class="row">
-			<div class="col-8">
-				<h1>フルーツ一覧</h1>
-				<div id="message"></div>
-				<table id="fruits-list" class="table table-hover">
-					<tr>
-						<th>商品名</th>
-						<th>産地</th>
-						<th>価格</th>
-					</tr>
-					<c:forEach var="fruit" items="${fruitList}">
-						<tr>
-							<td><c:out value="${fruit.name}" /></td>
-							<td><c:out value="${fruit.origin}" /></td>
-							<td><c:out value="${fruit.price}" />円</td>
-						</tr>
-					</c:forEach>
-				</table>
-				<br>
-				フルーツ名：<input type="text" id="name" class="form-control w-50">
-				産地：<input type="text" id="origin" class="form-control w-50">
-				価格：<input type="number" id="price" class="form-control w-50"><br>
-				<button id="add-fruit" class="btn btn-primary">追加</button>
-			</div>
-		</div>
-	</div>
-</body>
-</html>
+		}
+		return fruitList;
+	}
+
+	public int create(FruitDto fruit) throws SQLException, NamingException {
+		String sql = "INSERT INTO FRUIT (NAME, ORIGIN, PRICE) VALUES (?, ?, ?)";
+        try (Connection con = DataSourceManager.getConnection();
+        		PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, fruit.getName());
+            ps.setString(2, fruit.getOrigin());
+            ps.setInt(3, fruit.getPrice());
+            return ps.executeUpdate();
+        }
+    }
+}
 ```
 
-**AddFruitServlet**
+**AddFruitServlet.java**
 ```java
 package com.exercise.controller;
 
@@ -448,4 +411,87 @@ public class AddFruitServlet extends HttpServlet {
         }
 	}
 }
+```
+
+**jquery8.jsp**
+```html
+<%@page import="com.exercise.dto.FruitDto"%>
+<%@page import="java.util.List"%>
+<%@page import="com.exercise.dao.FruitDao"%>
+<%@ page language="java" contentType="text/html; charset=UTF-8"
+	pageEncoding="UTF-8"%>
+<%@ taglib uri="http://java.sun.com/jsp/jstl/core" prefix="c"%>
+<%
+	FruitDao dao = new FruitDao();
+	List<FruitDto> fruitList = dao.findAll();
+	request.setAttribute("fruitList", fruitList);
+%>
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>jQuery演習</title>
+<script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js"></script>
+<link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.2.1/css/bootstrap.min.css">
+<script type="text/javascript">
+$(function() {
+	$("#add-fruit").on("click", function() {
+		$("#message").empty();
+		$.ajax({
+			type: "POST",
+			url: "/jquery_sample/add-fruit",
+			data: {
+				"name": $("#name").val(),
+				"origin": $("#origin").val(),
+				"price": $("#price").val()
+			}
+        }).done(function() {
+			$("#fruits-list").append("<tr></tr>");
+			$("#fruits-list tr:last").append("<td>" + $("#name").val() + "</td>");
+			$("#fruits-list tr:last").append("<td>" + $("#origin").val() + "</td>");
+			$("#fruits-list tr:last").append("<td>" + $("#price").val() + "円</td>");
+
+			$("#name, #origin, #price").val("");
+
+			$("#message").attr("class", "alert alert-primary");
+			$("#message").text("フルーツを追加しました。");
+		}).fail(function() {
+			$("#message").attr("class", "alert alert-danger");
+			$("#message").text("フルーツの追加に失敗しました。");
+		});
+	});
+});
+</script>
+</head>
+<body>
+	<div class="container">
+		<div class="row">
+			<div class="col-8">
+				<h1>フルーツ一覧</h1>
+				<div id="message"></div>
+				<table id="fruits-list" class="table table-hover">
+					<tr>
+						<th>商品名</th>
+						<th>産地</th>
+						<th>価格</th>
+					</tr>
+					<c:forEach var="fruit" items="${fruitList}">
+						<tr>
+							<td><c:out value="${fruit.name}" /></td>
+							<td><c:out value="${fruit.origin}" /></td>
+							<td><c:out value="${fruit.price}" />円</td>
+						</tr>
+					</c:forEach>
+				</table>
+				<br>
+				フルーツ名：<input type="text" id="name" class="form-control w-50">
+				産地：<input type="text" id="origin" class="form-control w-50">
+				価格：<input type="number" id="price" class="form-control w-50"><br>
+				<button id="add-fruit" class="btn btn-primary">追加</button>
+			</div>
+		</div>
+	</div>
+</body>
+</html>
 ```
